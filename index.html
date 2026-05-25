@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>반품 양품화 관리</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:#1a1a1a;background:#f5f5f5}
+.hdr{background:#fff;border-bottom:1px solid #e0e0e0;padding:12px 24px;display:flex;align-items:center;gap:10px}
+.hdr h1{font-size:17px;font-weight:600}
+.tabs{background:#fff;border-bottom:1px solid #e0e0e0;padding:0 20px;display:none;overflow-x:auto}
+.tab{padding:11px 14px;border:none;background:none;cursor:pointer;color:#888;border-bottom:2px solid transparent;font-size:13px;font-weight:500;white-space:nowrap}
+.tab.on{color:#1a1a1a;border-bottom-color:#1a1a1a}
+.badge{display:inline-block;background:#e8f0fe;color:#1565c0;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px}
+.bw{background:#fff3e0;color:#e65100}.bg{background:#e8f5e9;color:#2e7d32}
+.wrap{padding:20px 24px;max-width:1400px;margin:0 auto}
+#page-upload{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:75vh;gap:22px}
+.up-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;width:100%;max-width:680px}
+.up-box{background:#fff;border:2px dashed #ddd;border-radius:14px;padding:28px 20px;text-align:center;transition:border-color .15s}
+.up-box:hover{border-color:#999}.up-box.done{border-color:#4caf50;border-style:solid;background:#f0fff4}
+.up-icon{font-size:34px;margin-bottom:8px}.up-label{font-size:13px;font-weight:600;margin-bottom:4px}
+.up-hint{font-size:11px;color:#aaa;margin-top:3px}.up-fname{font-size:12px;color:#2e7d32;font-weight:600;margin-top:10px;min-height:16px}
+.run-btn{padding:13px 48px;background:#1a1a1a;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer}
+.run-btn:disabled{opacity:.35;cursor:default}
+.cv-btn{background:none;border:none;cursor:pointer;font-size:12px;color:#aaa;text-decoration:underline}
+.cv-btn:disabled{opacity:.4;cursor:default}
+#page-progress{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:75vh;gap:20px}
+.prog-wrap{width:380px;background:#e8e8e8;border-radius:99px;height:12px;overflow:hidden}
+.prog-bar{height:100%;background:#1a1a1a;border-radius:99px;width:0%;transition:width .3s ease}
+#page-main{display:none}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.metric{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:13px 15px}
+.ml{font-size:11px;color:#888;margin-bottom:5px}.mv{font-size:22px;font-weight:600}
+.card{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:14px 16px;margin-bottom:10px}
+.tw{background:#fff;border:1px solid #e8e8e8;border-radius:10px;overflow:auto;max-height:560px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead{position:sticky;top:0;background:#fafafa;z-index:1}
+th{text-align:left;padding:8px 10px;border-bottom:1px solid #e8e8e8;font-weight:500;color:#555;white-space:nowrap}
+td{padding:7px 10px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500}
+.pk{background:#e8f5e9;color:#2e7d32}.pb{background:#fce4ec;color:#c62828}.pm{background:#f5f5f5;color:#888}
+.rtag{display:inline-block;border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600;white-space:nowrap}
+.rc{background:#e8f0fe;color:#1565c0}.rp{background:#fff3e0;color:#e65100}
+.rd{background:#fce4ec;color:#c62828}.rn{background:#f5f5f5;color:#999}
+.btn{padding:7px 14px;border:1px solid #ddd;border-radius:8px;cursor:pointer;font-size:12px;background:#fff;color:#1a1a1a;font-weight:500}
+.btn:hover{background:#f5f5f5}
+.bp{background:#1a1a1a;color:#fff;border-color:#1a1a1a}.bp:hover{background:#333}
+.bg2{background:#e8f5e9;color:#2e7d32;border-color:#a5d6a7}
+.br{background:#fce4ec;color:#c62828;border-color:#ef9a9a}
+input[type=text],input[type=number],select{padding:7px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;background:#fff}
+input:focus,select:focus{outline:none;border-color:#1a1a1a}
+.fb{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.sz{background:#fff;border:2px dashed #ddd;border-radius:10px;padding:14px;margin-bottom:14px}
+.sok{background:#e8f5e9;border:1.5px solid #a5d6a7;border-radius:10px;padding:14px;margin-bottom:12px}
+.sfl{background:#fce4ec;border:1.5px solid #ef9a9a;border-radius:10px;padding:14px;margin-bottom:12px}
+.rt td{background:#f0fff4}.rt:hover td{background:#e8f5e9!important}
+.re td{opacity:.4}
+.rph td{background:#fff8e1}.rph:hover td{background:#fff3e0!important}
+.eb{background:#f5f5f5;border-radius:10px;padding:14px;margin-top:14px}
+.eb pre{font-family:monospace;font-size:11px;white-space:pre-wrap;word-break:break-all;max-height:360px;overflow-y:auto;color:#333;line-height:1.6}
+.mono{font-family:monospace;font-size:11px}
+.notice{background:#fff3e0;border:1px solid #ffe082;border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:12px}
+.setting-section{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:16px;margin-bottom:14px}
+.setting-title{font-size:14px;font-weight:600;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #f0f0f0}
+.ch-row{display:grid;grid-template-columns:1fr 110px 1fr 60px;gap:8px;align-items:center;margin-bottom:8px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center}
+.modal{background:#fff;border-radius:14px;padding:24px;width:540px;max-width:95vw;max-height:85vh;overflow-y:auto}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <h1>반품 양품화 관리</h1>
+  <span id="hdrDate" style="font-size:12px;color:#aaa"></span>
+  <div style="margin-left:auto;display:flex;gap:8px">
+    <button class="btn" id="btnReload" onclick="goUpload()" style="display:none">↩ 다시 올리기</button>
+    <button class="btn" id="btnSheets" onclick="window.open('https://docs.google.com/spreadsheets/d/1_IGga1Khh6GK5ZnXDLq7bcy3U0p-Kh6K8rMevuTAhnE/edit?gid=1174473587#gid=1174473587','_blank')" style="display:none">📋 마감후취소 시트</button>
+  </div>
+</div>
+<div class="tabs" id="tabBar">
+  <button class="tab on" onclick="setTab(0,this)">RAW 데이터 <span class="badge" id="b0">–</span></button>
+  <button class="tab" onclick="setTab(1,this)">스캔·검증 <span class="badge bw" id="b1">–</span></button>
+  <button class="tab" onclick="setTab(2,this)">최종 출력 <span class="badge bg" id="b2">–</span></button>
+  <button class="tab" onclick="setTab(3,this)">⚙️ 발송 설정</button>
+</div>
+<div class="wrap">
+<div id="page-upload">
+  <div style="font-size:22px;font-weight:700">반품 양품화 관리</div>
+  <div style="font-size:14px;color:#888">파일 두 개를 올리면 자동으로 처리됩니다</div>
+  <div class="up-grid">
+    <div class="up-box" id="box1">
+      <div class="up-icon">📋</div>
+      <div class="up-label">검품완료데이터</div>
+      <div class="up-hint">아래 버튼으로 파일 선택</div>
+      <div class="up-hint">검품완료데이터_YYYY_MM_DD.xlsx</div>
+      <div class="up-fname" id="fn1"></div>
+      <label style="display:inline-block;margin-top:12px;padding:7px 16px;background:#f0f0f0;border-radius:8px;cursor:pointer;font-size:12px;font-weight:500">파일 선택<input type="file" accept=".xlsx,.xls" style="display:none" onchange="onFile1(this)"></label>
+    </div>
+    <div class="up-box" id="box2">
+      <div class="up-icon">📦</div>
+      <div class="up-label">로케이션별 재고정보</div>
+      <div class="up-hint">여러 파일 동시 선택 가능</div>
+      <div class="up-hint">xlsx 또는 재고매핑.csv</div>
+      <div class="up-fname" id="fn2" style="font-size:11px"></div>
+      <label style="display:inline-block;margin-top:12px;padding:7px 16px;background:#f0f0f0;border-radius:8px;cursor:pointer;font-size:12px;font-weight:500">파일 선택<input type="file" accept=".xlsx,.xls,.csv" multiple style="display:none" onchange="onInvFiles(this)"></label>
+    </div>
+  </div>
+  <button class="run-btn" id="runBtn" onclick="processFiles()" disabled>처리 시작</button>
+  <button class="cv-btn" id="cvBtn" onclick="convertCSV()" disabled>📥 재고매핑.csv 만들기</button>
+</div>
+<div id="page-progress">
+  <div style="font-size:15px;font-weight:500" id="pMsg">준비 중...</div>
+  <div class="prog-wrap"><div class="prog-bar" id="pBar"></div></div>
+  <div style="font-size:13px;color:#888" id="pPct">0%</div>
+  <div style="font-size:12px;color:#bbb">파일 크기에 따라 10~30초 소요될 수 있어요</div>
+</div>
+<div id="page-main"></div>
+</div>
+
+<!-- 변환 모달 -->
+<div class="modal-bg" id="cvModal">
+  <div class="modal">
+    <div style="font-size:16px;font-weight:600;margin-bottom:6px">📥 재고매핑.csv 만들기</div>
+    <div style="font-size:12px;color:#888;margin-bottom:16px">로케이션별 재고정보 파일을 <strong>재고매핑.csv</strong>로 변환합니다.<br>여러 파일을 동시에 선택하면 합쳐서 저장됩니다.</div>
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:600;margin-bottom:6px">로케이션별 재고정보 <span style="color:#c62828">*필수, 여러 개 선택 가능</span></div>
+      <label style="display:inline-block;padding:7px 14px;background:#f0f0f0;border-radius:8px;cursor:pointer;font-size:12px;font-weight:500">파일 선택 (복수 가능)<input type="file" accept=".xlsx,.xls" multiple style="display:none" onchange="onCvFile(this,'inv')"></label>
+      <span id="cv_fn_inv" style="font-size:12px;color:#2e7d32;margin-left:8px;display:block;margin-top:6px"></span>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeCvModal()">닫기</button>
+      <button class="btn bp" id="cvRunBtn" onclick="runConvert()" disabled>변환 및 저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 발송 모달 -->
+<div class="modal-bg" id="sendModal">
+  <div class="modal">
+    <div style="font-size:16px;font-weight:600;margin-bottom:16px">📤 리포트 발송</div>
+    <div id="sendList"></div>
+    <div style="margin-top:16px;padding-top:12px;border-top:1px solid #f0f0f0;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeSendModal()">닫기</button>
+      <button class="btn bp" onclick="sendAll()">전체 발송</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+
+async function fetchCancelSheet(){
+  const scriptUrl=getSetting('scriptUrl','');
+  if(!scriptUrl){console.warn('Apps Script URL 미설정');return [];}
+  try{
+    const resp=await fetch(scriptUrl+'?action=cancelList',{cache:'no-cache'});
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const json=await resp.json();
+    if(!json.ok) throw new Error(json.error||'오류');
+    return json.invoices||[];
+  }catch(e){
+    console.warn('마감후취소 읽기 실패:',e.message);
+    return [];
+  }
+}
+async function loadCancelSheet(){
+  const el=document.getElementById('cancelSheetStatus');
+  if(el) el.textContent='⏳ 시트 읽는 중...';
+  const invNos=await fetchCancelSheet();
+  cancelSet=new Set(invNos);
+  if(el){
+    if(invNos.length>0) el.textContent='✓ 마감후취소 '+invNos.length+'건 로드됨';
+    else el.textContent='⚠ 미로드 — 설정 탭에서 Apps Script URL 입력 후 새로고침';
+  }
+  if(RAW.length>0) render(); // 이미 데이터 있으면 재렌더
+}
+const EXCLUDE=['랄프로렌','데일리뷰티'];
+const NO_LOT_EDIT=['3CE','로레알파리','라로슈포제'];
+const REASON_ORDER={'마감후취소':0,'파손반송':1,'당배반송':2,'사유미기재':3};
+
+let F={1:null,2:null};
+let RAW=[], curTab=0;
+let confirmations={}, edits={};
+let cancelSet=new Set();
+let fCo='',fRes='';
+let scanResult=null, scanNotFound=null;
+let inboundNos={};
+let noSendSet=new Set();
+let chArr=[], chBuf={}; // 미발송 체크된 ibKey들
+
+// ── 설정 (localStorage 영구 저장) ────────────────────────
+function loadSettings(){try{return JSON.parse(localStorage.getItem('rqc_settings')||'{}');}catch(e){return {};}}
+function saveSettings(s){localStorage.setItem('rqc_settings',JSON.stringify(s));}
+function getSetting(key,def){return (loadSettings()[key]!==undefined?loadSettings()[key]:def||'');}
+function setSetting(key,val){const s=loadSettings();s[key]=val;saveSettings(s);}
+function loadChannels(){try{return JSON.parse(localStorage.getItem('rqc_channels')||'[]');}catch(e){return [];}}
+function saveChannels(arr){localStorage.setItem('rqc_channels',JSON.stringify(arr));}
+const HIST_KEY='rqc_history';
+function loadHistory(){try{return JSON.parse(localStorage.getItem(HIST_KEY)||'[]');}catch(e){return [];}}
+function saveHistory(arr){try{localStorage.setItem(HIST_KEY,JSON.stringify(arr));}catch(e){}}
+function mergeHistory(newRaw){
+  const hist=loadHistory();
+  const keys=new Set(hist.map(r=>r.inspDate+'|'+r.barcode+'|'+r.retInvoice));
+  const added=newRaw.filter(r=>!keys.has(r.inspDate+'|'+r.barcode+'|'+r.retInvoice));
+  saveHistory([...hist,...added]);
+}
+
+// ── 업로드 ───────────────────────────────────────────────
+let invFiles=[]; // 재고파일 배열
+
+function onFile1(input){
+  const f=input.files[0]; if(!f)return;
+  F[1]=f;
+  document.getElementById('fn1').textContent='✓ '+f.name;
+  document.getElementById('box1').classList.add('done');
+  checkReady();
+}
+
+function onInvFiles(input){
+  const files=Array.from(input.files);
+  if(!files.length)return;
+  invFiles=files;
+  document.getElementById('fn2').textContent='✓ '+files.map(f=>f.name).join(', ')+' ('+files.length+'개)';
+  document.getElementById('box2').classList.add('done');
+  checkReady();
+}
+
+function checkReady(){
+  const ok=F[1]&&invFiles.length>0;
+  document.getElementById('runBtn').disabled=!ok;
+  document.getElementById('cvBtn').disabled=invFiles.length===0;
+}
+function goUpload(){
+  F={1:null,2:null};RAW=[];confirmations={};edits={};cancelSet=new Set();fCo='';fRes='';
+  ['fn1','fn2','fn3'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='';});
+  ['box1','box2','box3'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('done');});
+  document.getElementById('runBtn').disabled=true;
+  document.getElementById('cvBtn').disabled=true;
+
+  document.getElementById('tabBar').style.display='none';
+  ['btnReload','btnSheets'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('hdrDate').textContent='';
+  showPage('upload');
+}
+function showPage(n){
+  ['upload','progress','main'].forEach(p=>{
+    const el=document.getElementById('page-'+p);
+    el.style.display=(p===n)?(n==='main'?'block':'flex'):'none';
+  });
+}
+
+// ── 진행바 ───────────────────────────────────────────────
+function upd(pct,msg){
+  document.getElementById('pBar').style.width=pct+'%';
+  document.getElementById('pMsg').textContent=msg;
+  document.getElementById('pPct').textContent=pct+'%';
+}
+function runStep(pct,msg,fn){
+  return new Promise((res,rej)=>{upd(pct,msg);setTimeout(()=>{try{res(fn());}catch(e){rej(e);}},60);});
+}
+function readBuf(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=e=>res(e.target.result);
+    r.onerror=()=>rej(new Error('파일 읽기 실패'));
+    r.readAsArrayBuffer(file);
+  });
+}
+
+// ── 파일 처리 ────────────────────────────────────────────
+function processFiles(){
+  document.getElementById('runBtn').disabled=true;
+  showPage('progress');
+  setTimeout(()=>{
+    // 검품완료 + 재고파일들 동시 읽기
+    const allBufs=[readBuf(F[1]),...invFiles.map(f=>readBuf(f))];
+    Promise.all(allBufs)
+    .then(bufs=>runStep(30,'📋 검품완료 파싱 중...',()=>{
+      const wb=XLSX.read(bufs[0],{type:'array'});
+      const df1=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:null,raw:false});
+      return{df1,invBufs:bufs.slice(1)};
+    }))
+    .then(({df1,invBufs})=>runStep(65,'📦 재고 데이터 파싱 중... ('+invBufs.length+'개 파일)',()=>{
+      // 재고파일 여러 개 합치기
+      let df2=[];
+      invBufs.forEach((buf,i)=>{
+        const fname=invFiles[i].name.toLowerCase();
+        let rows;
+        if(fname.endsWith('.csv')){
+          rows=parseCSV(new TextDecoder('utf-8').decode(new Uint8Array(buf)));
+        }else{
+          const wb=XLSX.read(buf,{type:'array'});
+          rows=fastSheet(wb.Sheets[wb.SheetNames[0]]);
+        }
+        df2=df2.concat(rows);
+      });
+      return{df1,df2};
+    }))
+    .then(({df1,df2})=>runStep(90,'⚙️ 매핑 중...',()=>{RAW=buildRaw(df1,df2);}))
+    .then(()=>runStep(100,'✅ 완료!',()=>{}))
+    .then(()=>setTimeout(()=>{
+      showPage('main');
+      document.getElementById('tabBar').style.display='flex';
+      ['btnReload','btnSheets'].forEach(id=>document.getElementById(id).style.display='');
+      document.getElementById('hdrDate').textContent=new Date().toLocaleDateString('ko-KR');
+      mergeHistory(RAW);
+      curTab=0;
+      loadCancelSheet().then(()=>render());
+    },400))
+    .catch(e=>{
+      showPage('main');
+      document.getElementById('page-main').innerHTML='<div style="text-align:center;padding:60px;color:#c62828"><div style="font-size:16px;font-weight:600;margin-bottom:8px">오류</div><div style="font-size:13px">'+e.message+'</div><button class="btn" onclick="goUpload()" style="margin-top:16px">다시 시도</button></div>';
+    });
+  },80);
+}
+
+function fastSheet(sheet){
+  const range=XLSX.utils.decode_range(sheet['!ref']);
+  // 헤더 읽기 - 공백/특수문자 trim 처리
+  const hdrs=[];
+  for(let c=range.s.c;c<=range.e.c;c++){
+    const cell=sheet[XLSX.utils.encode_cell({r:range.s.r,c})];
+    hdrs.push(cell?String(cell.v).trim():'');
+  }
+  // 유연한 컬럼 매칭 (공백 포함/미포함, 부분 매칭)
+  const findCol=(keywords)=>hdrs.findIndex(h=>keywords.some(k=>h===k||h.replace(/\s/g,'')===k.replace(/\s/g,'')));
+  const ci={
+    type:findCol(['로케이션 유형','로케이션유형']),
+    bc:findCol(['바코드']),
+    exp:findCol(['소비기한']),
+    lot:findCol(['로트']),
+  };
+  // 컬럼을 못 찾으면 에러 표시
+  if(ci.type===-1||ci.bc===-1){
+    console.error('fastSheet: 필수 컬럼을 찾을 수 없습니다. 헤더:', hdrs);
+    throw new Error('재고파일 형식 오류: "로케이션 유형" 또는 "바코드" 컬럼을 찾을 수 없습니다.\n현재 헤더: '+hdrs.filter(Boolean).join(', '));
+  }
+  const rows=[];
+  for(let r=range.s.r+1;r<=range.e.r;r++){
+    const tc=sheet[XLSX.utils.encode_cell({r,c:ci.type})];
+    const type=tc?String(tc.v).trim():'';
+    if(type!=='B2C출고'&&type!=='보관')continue;
+    const bc=sheet[XLSX.utils.encode_cell({r,c:ci.bc})];
+    const ex=ci.exp>=0?sheet[XLSX.utils.encode_cell({r,c:ci.exp})]:null;
+    const lo=ci.lot>=0?sheet[XLSX.utils.encode_cell({r,c:ci.lot})]:null;
+    // 바코드 문자열 강제 변환 (숫자형 바코드 지수표기 방지)
+    const bcVal=bc?(bc.t==='n'?String(Math.round(bc.v)):String(bc.v)):'';
+    rows.push({'로케이션 유형':type,'바코드':bcVal,'소비기한':ex?ex.v:null,'로트':lo?lo.v:null});
+  }
+  return rows;
+}
+
+function parseCSV(text){
+  const lines=text.replace(/\r/g,'').split('\n');
+  const hdrs=lines[0].split(',').map(h=>h.replace(/^"|"$/g,'').trim());
+  const rows=[];
+  for(let i=1;i<lines.length;i++){
+    const ln=lines[i].trim();if(!ln)continue;
+    const vals=ln.split(',').map(v=>v.replace(/^"|"$/g,'').trim());
+    const row={};hdrs.forEach((h,j)=>{row[h]=vals[j]||'';});rows.push(row);
+  }
+  return rows;
+}
+
+function fmtDate(v){
+  if(v===null||v===undefined||v==='')return null;
+  if(typeof v==='number'){const d=XLSX.SSF.parse_date_code(v);if(d)return d.y+'-'+String(d.m).padStart(2,'0')+'-'+String(d.d).padStart(2,'0');}
+  const s=String(v).trim();
+  if(!s||s==='null'||s==='NaT')return null;
+  const m=s.match(/(\d{4})-(\d{2})-(\d{2})/);
+  return m?m[1]+'-'+m[2]+'-'+m[3]:null;
+}
+
+function buildRaw(df1,df2){
+  // B2C 재고 매핑 (실제 소비기한/로트 값)
+  const b2c={},보관=new Set();
+  df2.forEach(row=>{
+    const type=(row['로케이션 유형']||'').trim();
+    const bc=String(row['바코드']||'').trim();
+    if(!bc)return;
+    if(type==='B2C출고'&&!b2c[bc]){
+      const lot=row['로트']?String(row['로트']).trim():null;
+      b2c[bc]={exp:fmtDate(row['소비기한']),lot:(lot&&lot!=='null'&&lot!=='NaN')?lot:null};
+    }else if(type==='보관')보관.add(bc);
+  });
+  const skuMap={}; // SKU 파일 미사용
+  return df1.map((row,idx)=>{
+    const co=String(row['고객사명']||'').trim();
+    const excl=EXCLUDE.includes(co);
+    const bc=String(row['바코드']||'').trim();
+    const oq=parseInt(row['원 수량']||1)||1;
+    const ir=String(row['검품결과']||'').trim();
+    const is_=String(row['검품상태']||'').trim();
+    let nq=oq===1?(ir==='정상'?1:0):is_.split(',').map(s=>s.trim()).filter(s=>s==='정상').length;
+
+    const skuInfo=skuMap[bc];
+    const b2cInfo=b2c[bc];
+    let exp,lot;
+
+    if(skuInfo){
+      // SKU 파일 기준: 관리 여부 먼저 확인
+      const expUse=skuInfo.expMgmt!=='사용 안 함';
+      const lotUse=skuInfo.lotMgmt!=='사용 안 함';
+      exp=expUse?(b2cInfo&&b2cInfo.exp?b2cInfo.exp:'실물확인'):'관리안함';
+      lot=lotUse?(b2cInfo&&b2cInfo.lot?b2cInfo.lot:'실물확인'):'관리안함';
+    }else if(b2cInfo){
+      // 재고파일 기준: 없으면 관리안함 (실물확인 X)
+      exp=b2cInfo.exp||'관리안함';
+      lot=b2cInfo.lot||'관리안함';
+    }else if(보관.has(bc)){
+      // 보관 로케이션에 있으면 실물확인
+      exp=lot='실물확인';
+    }else{
+      // 재고파일에 아예 없으면 실물확인
+      exp=lot='실물확인';
+    }
+
+    const ri=String(row['회수송장번호']||'').replace(/\.0$/,'').trim();
+    const oi=String(row['원송장번호']||'').replace(/\.0$/,'').trim();
+    const reason=ri.startsWith('5600')?'당배반송':ri===oi?'파손반송':'사유미기재';
+    return{id:idx,company:co,excluded:excl,barcode:bc,
+      csNo:String(row['CS번호']||'').trim(),
+      orderNo:String(row['원주문번호']||'').trim(),
+      origInvoice:oi,retInvoice:ri,
+      skuName:String(row['회수 SKU명']||row['회수SKU명']||'').trim(),
+      origQty:oq,retQty:parseInt(row['회수 수량']||0)||0,
+      inspResult:ir,inspStatus:is_,
+      normalQty:nq,abnormalQty:oq-nq,expDate:exp,lot,returnReason:reason,
+      isTarget:!excl&&nq>0,inspDate:String(row['검품일']||'').split('T')[0]};
+  });
+}
+
+function convertSkuCSV(){
+  if(!F[3]||F[3].name.endsWith('.csv')){alert('xlsx SKU 파일을 올려주세요.');return;}
+  document.getElementById('cvSkuBtn').textContent='변환 중...';
+  readBuf(F[3]).then(buf=>{
+    const wb=XLSX.read(buf,{type:'array'});
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:null,raw:false});
+    const header='대표 바코드,소비기한 관리,로트 관리';
+    const lines=rows.map(r=>{
+      const bc=String(r['대표 바코드']||'').trim();
+      const exp=String(r['소비기한 관리']||'').trim();
+      const lot=String(r['로트 관리']||'').trim();
+      return bc+','+exp+','+lot;
+    }).filter(l=>l.split(',')[0]);
+    const csv='\uFEFF'+header+'\n'+lines.join('\n');
+    const bom=new Uint8Array([0xEF,0xBB,0xBF]);
+    const body=new TextEncoder().encode(header+'\n'+lines.join('\n'));
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([bom,body],{type:'text/csv;charset=utf-8'}));
+    a.download='SKU매핑.csv';a.click();
+    document.getElementById('cvSkuBtn').textContent='✅ SKU매핑.csv 저장됨 ('+lines.length+'건)';
+  }).catch(e=>alert('오류: '+e.message));
+}
+
+let _cvInvFiles=[];
+
+function onCvFile(input, type){
+  const files=Array.from(input.files);
+  if(!files.length)return;
+  if(type==='inv'){
+    _cvInvFiles=files;
+    document.getElementById('cv_fn_inv').textContent='✓ '+files.map(f=>f.name).join(', ')+' ('+files.length+'개)';
+    document.getElementById('cvRunBtn').disabled=false;
+  }
+}
+
+function runConvert(){
+  if(!_cvInvFiles.length){alert('재고파일을 올려주세요.');return;}
+  const btn=document.getElementById('cvRunBtn');
+  btn.textContent='변환 중...';
+  // 여러 파일 순차 읽기 후 합치기
+  const readAll=_cvInvFiles.map(f=>new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=e=>res({buf:e.target.result,name:f.name});
+    r.onerror=()=>rej(new Error(f.name+' 읽기 실패'));
+    r.readAsArrayBuffer(f);
+  }));
+  Promise.all(readAll).then(results=>{
+    try{
+      let allRows=[];
+      results.forEach(({buf,name})=>{
+        const wb=XLSX.read(buf,{type:'array'});
+        const rows=fastSheet(wb.Sheets[wb.SheetNames[0]]);
+        allRows=allRows.concat(rows);
+      });
+      const header='로케이션 유형,바코드,소비기한,로트';
+      const lines=allRows.map(r=>{
+        const bc=String(r['바코드']||'').trim();
+        const exp=fmtDate(r['소비기한'])||'';
+        const rawLot=r['로트']?String(r['로트']).trim():'';
+        const lot=(rawLot&&rawLot!=='null'&&rawLot!=='NaN')?rawLot:'';
+        return r['로케이션 유형']+','+bc+','+exp+','+lot;
+      });
+      const bom=new Uint8Array([0xEF,0xBB,0xBF]);
+      const body=new TextEncoder().encode(header+'\n'+lines.join('\n'));
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(new Blob([bom,body],{type:'text/csv;charset=utf-8'}));
+      a.download='재고매핑.csv'; a.click();
+      btn.textContent='✅ 재고매핑.csv 저장됨 ('+lines.length+'건, '+results.length+'개 파일)';
+    }catch(e){
+      btn.textContent='변환 실패';
+      alert('오류: '+e.message);
+      console.error(e);
+    }
+  }).catch(e=>{btn.textContent='변환 실패';alert('오류: '+e.message);});
+}
+
+function closeCvModal(){
+  document.getElementById('cvModal').style.display='none';
+  _cvInvFiles=[];
+  const el=document.getElementById('cv_fn_inv');if(el)el.textContent='';
+  const btn=document.getElementById('cvRunBtn');
+  if(btn){btn.disabled=true;btn.textContent='변환 및 저장';}
+}
+
+
+
+function convertCSV(){
+  document.getElementById('cvModal').style.display='flex';
+}
+
+function targets(){return RAW.filter(r=>r.isTarget);}
+function effReason(r){return cancelSet.has(r.retInvoice)?'마감후취소':r.returnReason;}
+function getSplits(r){return(edits[r.id]&&edits[r.id].splits)?edits[r.id].splits:[{qty:r.normalQty,expDate:r.expDate,lot:r.lot}];}
+function setSplits(id,s){if(!edits[id])edits[id]={};edits[id].splits=s;}
+
+function rtag(r){
+  const m={'마감후취소':'rc','당배반송':'rp','파손반송':'rd','사유미기재':'rn'};
+  return '<span class="rtag '+(m[r]||'rn')+'">'+r+'</span>';
+}
+function rpill(r){return r==='정상'?'<span class="pill pk">정상</span>':'<span class="pill pb">비정상</span>';}
+function exLbl(v){
+  if(v==='관리안함')return '<span style="color:#ccc">관리안함</span>';
+  if(v==='실물확인')return '<span style="color:#e65100;font-weight:600">실물확인</span>';
+  if(v==='보관')return '<span style="color:#999">보관</span>';
+  return v||'';
+}
+function lotLbl(v){
+  if(!v||v==='관리안함')return '<span style="color:#ccc">관리안함</span>';
+  if(v==='실물확인')return '<span style="color:#e65100">실물확인</span>';
+  return v;
+}
+
+function setTab(n,el){
+  curTab=n;scanResult=null;scanNotFound=null;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');render();
+}
+function updBadges(){
+  const tgts=targets(),conf=tgts.filter(r=>confirmations[r.id]);
+  document.getElementById('b0').textContent=RAW.length;
+  document.getElementById('b1').textContent=tgts.length;
+  document.getElementById('b2').textContent=conf.length+'/'+tgts.length;
+}
+function render(){
+  updBadges();
+  const el=document.getElementById('page-main');
+  if(curTab===0)el.innerHTML=renderRaw();
+  else if(curTab===1)el.innerHTML=renderScan();
+  else if(curTab===2)el.innerHTML=renderOut();
+  else el.innerHTML=renderSettings();
+}
+
+// ── Tab0 RAW ─────────────────────────────────────────────
+function renderRaw(){
+  const cos=[...new Set(RAW.map(r=>r.company))].sort((a,b)=>a.localeCompare(b,'ko'));
+  let filt=RAW;
+  if(fCo)filt=filt.filter(r=>r.company===fCo);
+  if(fRes)filt=filt.filter(r=>r.inspResult===fRes);
+  const tgts=targets();
+  const rows=filt.map(r=>{
+    const cls=r.excluded?'re':r.isTarget?'rt':'';
+    return '<tr class="'+cls+'">'
+      +'<td style="font-weight:500;white-space:nowrap">'+r.company+'</td>'
+      +'<td class="mono" style="font-size:10px">'+r.csNo+'</td>'
+      +'<td class="mono" style="font-size:10px">'+r.orderNo+'</td>'
+      +'<td class="mono">'+r.retInvoice+'</td>'
+      +'<td class="mono">'+r.origInvoice+'</td>'
+      +'<td class="mono">'+r.barcode+'</td>'
+      +'<td style="max-width:180px;font-size:11px">'+r.skuName+'</td>'
+      +'<td>'+rpill(r.inspResult)+'</td>'
+      +'<td style="text-align:center">'+(r.normalQty>0?'<b style="color:#2e7d32">'+r.normalQty+'</b>':'–')+'</td>'
+      +'<td style="text-align:center">'+(r.abnormalQty>0?'<span style="color:#c62828">'+r.abnormalQty+'</span>':'–')+'</td>'
+      +'<td style="font-size:11px;max-width:150px">'+r.inspStatus+'</td>'
+      +'<td style="font-size:11px;white-space:nowrap">'+exLbl(r.expDate)+'</td>'
+      +'<td class="mono">'+lotLbl(r.lot)+'</td>'
+      +'<td>'+rtag(effReason(r))+'</td>'
+      +'<td>'+(r.excluded?'<span class="pill pm">제외</span>':r.isTarget?'<span class="pill pk">양품화</span>':'<span class="pill pb">비정상</span>')+'</td>'
+      +'</tr>';
+  }).join('');
+
+  const cancelTags=[...cancelSet].map(v=>'<span style="display:inline-block;background:#e8f0fe;color:#1565c0;border-radius:6px;padding:2px 8px;font-size:11px;margin:2px;cursor:pointer" onclick="rmCancel(\''+v+'\')">'+v+' ✕</span>').join('')||'<span style="color:#ccc;font-size:11px">없음</span>';
+  const coOpts=cos.map(c=>'<option value="'+c+'"'+(fCo===c?' selected':'')+'>'+c+'</option>').join('');
+
+  const cancelStatus=[...cancelSet].length>0
+    ?'✓ '+[...cancelSet].length+'건 로드됨 ('+[...cancelSet].slice(0,3).join(', ')+([...cancelSet].length>3?'...':'')+')'
+    :'⚠ 미로드';
+  return '<div class="notice" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
+    +'<strong>마감후취소</strong>'
+    +'<span style="font-size:11px;color:#888" id="cancelSheetStatus">'+cancelStatus+'</span>'
+    +'<button class="btn" style="font-size:11px;padding:3px 10px" onclick="loadCancelSheet()">🔄 시트 새로고침</button>'
+    +'</div>'
+    +'<div class="g4">'
+    +'<div class="metric"><div class="ml">전체 검품</div><div class="mv">'+RAW.length+'</div></div>'
+    +'<div class="metric"><div class="ml">양품화 대상</div><div class="mv" style="color:#2e7d32">'+tgts.length+'</div></div>'
+    +'<div class="metric"><div class="ml">제외(랄프·데일리뷰티)</div><div class="mv" style="color:#999">'+RAW.filter(r=>r.excluded).length+'</div></div>'
+    +'<div class="metric"><div class="ml">실물확인 필요</div><div class="mv" style="color:#e65100">'+tgts.filter(r=>r.expDate==='실물확인').length+'</div></div>'
+    +'</div>'
+    +'<div class="notice"><strong>마감후취소</strong> — 구글 시트 확인 후 회수송장번호 입력<br>'
+    +'<div style="display:flex;gap:8px;margin-top:8px"><input type="text" id="ci" placeholder="회수송장번호 후 Enter" style="max-width:260px" onkeydown="if(event.key===\'Enter\')addCancel()"><button class="btn bp" onclick="addCancel()">추가</button></div>'
+    +'<div style="margin-top:6px">'+cancelTags+'</div></div>'
+    +'<div class="fb">'
+    +'<select onchange="fCo=this.value;render()"><option value="">전체 고객사</option>'+coOpts+'</select>'
+    +'<select onchange="fRes=this.value;render()"><option value="">전체 결과</option><option value="정상"'+(fRes==='정상'?' selected':'')+'>정상</option><option value="비정상"'+(fRes==='비정상'?' selected':'')+'>비정상</option></select>'
+    +'<button class="btn" onclick="fCo=\'\';fRes=\'\';render()">초기화</button>'
+    +'<span style="margin-left:auto;font-size:12px;color:#888">'+filt.length+'건</span></div>'
+    +'<div class="tw"><table>'
+    +'<thead><tr><th>고객사</th><th>CS번호</th><th>주문번호</th><th>회수송장</th><th>원송장</th><th>바코드</th><th>SKU명</th><th>결과</th><th>정상</th><th>비정상</th><th>검품상태</th><th>소비기한</th><th>로트</th><th>반송사유</th><th>구분</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table></div>';
+}
+function addCancel(){const v=document.getElementById('ci').value.trim();if(v)cancelSet.add(v);render();}
+function rmCancel(v){cancelSet.delete(v);render();}
+
+// ── Tab1 Scan ─────────────────────────────────────────────
+function renderScan(){
+  const tgts=targets(),conf=tgts.filter(r=>confirmations[r.id]);
+  const phys=tgts.filter(r=>getSplits(r).some(s=>s.expDate==='실물확인'||s.lot==='실물확인'));
+  let sh=scanResult?renderCard(scanResult):scanNotFound?'<div class="sfl"><strong>바코드 없음:</strong> '+scanNotFound+'</div>':'';
+  const rows=tgts.map(r=>{
+    const isConf=!!confirmations[r.id];
+    const sp=getSplits(r),tq=sp.reduce((s,x)=>s+Number(x.qty||0),0);
+    const phys2=sp.some(s=>s.expDate==='실물확인'||s.lot==='실물확인');
+    const sum=sp.length===1
+      ?(lotLbl(sp[0].lot)+' / '+exLbl(sp[0].expDate))
+      :sp.map(s=>'<span style="display:inline-block;background:#f0f4ff;border-radius:4px;padding:1px 6px;margin:1px;font-size:10px">'+s.qty+'개 '+lotLbl(s.lot)+'/'+( s.expDate==='관리안함'?'관리안함':s.expDate||'–')+'</span>').join('');
+    return '<tr class="'+(phys2?'rph':'')+'">'
+      +'<td style="text-align:center">'+(isConf?'<span style="color:#2e7d32;font-size:16px">✓</span>':phys2?'<span style="color:#e65100">⚠</span>':'<span style="color:#ccc">○</span>')+'</td>'
+      +'<td style="font-weight:500;font-size:12px">'+r.company+'</td>'
+      +'<td class="mono" style="font-size:10px">'+r.csNo+'</td>'
+      +'<td class="mono">'+r.barcode+'</td>'
+      +'<td style="font-size:11px;max-width:160px">'+r.skuName+'</td>'
+      +'<td style="text-align:center;font-weight:700">'+tq+'</td>'
+      +'<td style="font-size:11px">'+sum+'</td>'
+      +'<td><button class="btn" style="font-size:11px;padding:4px 10px" onclick="openItem('+r.id+')">열기</button></td>'
+      +'</tr>';
+  }).join('');
+  return '<div style="display:flex;gap:12px;margin-bottom:14px">'
+    +'<div class="metric" style="flex:1"><div class="ml">전체 대상</div><div class="mv">'+tgts.length+'</div></div>'
+    +'<div class="metric" style="flex:1"><div class="ml">확인 완료</div><div class="mv" style="color:#2e7d32">'+conf.length+'</div></div>'
+    +'<div class="metric" style="flex:1"><div class="ml">대기</div><div class="mv">'+(tgts.length-conf.length)+'</div></div>'
+    +'<div class="metric" style="flex:1"><div class="ml">실물확인 필요</div><div class="mv" style="color:#e65100">'+phys.length+'</div></div>'
+    +'</div>'
+    +'<div class="sz"><div style="font-size:13px;font-weight:600;margin-bottom:10px">바코드 스캔</div>'
+    +'<div style="display:flex;gap:8px"><input type="text" id="si" placeholder="바코드 스캔 또는 입력 후 Enter" style="flex:1" onkeydown="if(event.key===\'Enter\')doScan()"><button class="btn bp" onclick="doScan()">스캔</button></div></div>'
+    +sh
+    +'<div class="tw"><table>'
+    +'<thead><tr><th>상태</th><th>고객사</th><th>CS번호</th><th>바코드</th><th>SKU명</th><th>수량</th><th>로트 / 소비기한</th><th></th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table></div>';
+}
+
+function renderCard(r){
+  const noLot=NO_LOT_EDIT.includes(r.company),isConf=!!confirmations[r.id];
+  const sp=getSplits(r),tq=sp.reduce((s,x)=>s+Number(x.qty||0),0),ok=tq===r.normalQty;
+  const splitRows=sp.map((s,i)=>{
+    return '<tr>'
+      +'<td style="padding:5px 4px;text-align:center"><input type="number" min="0" value="'+s.qty+'" style="width:56px;text-align:center;font-weight:700;font-size:14px" onchange="updSplit('+r.id+','+i+',\'qty\',parseInt(this.value)||0)"></td>'
+      +'<td style="padding:5px 4px"><input type="text" value="'+(s.lot||'')+'" placeholder="없으면 관리안함" '+(noLot?'disabled style="opacity:0.4;width:120px"':'style="width:120px"')+' onchange="updSplit('+r.id+','+i+',\'lot\',this.value)"></td>'
+      +'<td style="padding:5px 4px"><input type="text" value="'+(s.expDate||'')+'" placeholder="YYYY-MM-DD 또는 관리안함" style="width:148px" onchange="updSplit('+r.id+','+i+',\'expDate\',this.value)"></td>'
+      +'<td style="padding:5px 4px;text-align:center">'+(sp.length>1?'<button class="btn" style="padding:2px 7px;font-size:11px;color:#c62828" onclick="rmSplit('+r.id+','+i+')">✕</button>':'')+'</td>'
+      +'</tr>';
+  }).join('');
+  return '<div class="sok" id="scanCard">'
+    +'<div style="display:flex;justify-content:space-between;margin-bottom:12px">'
+    +'<div><div style="font-weight:700;font-size:15px">'+r.company+(isConf?' <span class="pill pk">✓ 완료</span>':'')+'</div>'
+    +'<div style="font-size:12px;color:#555;margin-top:2px">'+r.skuName+'</div>'
+    +'<div class="mono" style="color:#aaa;margin-top:2px">'+r.barcode+'</div>'
+    +'<div style="font-size:11px;color:#888;margin-top:2px">CS: '+r.csNo+' | 주문: '+r.orderNo+'</div></div>'
+    +'<button class="btn" onclick="scanResult=null;render()">닫기</button></div>'
+    +'<div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:12px;margin-bottom:12px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+    +'<div><span style="font-size:12px;color:#888">검품 정상수량:</span><span style="font-size:18px;font-weight:700;margin-left:6px">'+r.normalQty+'개</span>'
+    +'<span style="font-size:12px;color:#888;margin-left:12px">입력 합계:</span><span style="font-size:18px;font-weight:700;margin-left:6px;color:'+(ok?'#2e7d32':'#c62828')+'">'+tq+'개</span>'
+    +(!ok?'<span style="font-size:11px;color:#c62828;margin-left:6px">⚠ 수량 불일치</span>':'')+'</div>'
+    +'<button class="btn" onclick="addSplit('+r.id+')">+ 행 추가</button></div>'
+    +'<table style="width:100%;border-collapse:collapse"><thead><tr style="background:#f8f8f8">'
+    +'<th style="padding:6px 4px;font-size:11px;text-align:center;width:70px">수량</th>'
+    +'<th style="padding:6px 4px;font-size:11px">로트'+(noLot?' <span style="color:#c62828;font-size:10px">수정불가</span>':'')+'</th>'
+    +'<th style="padding:6px 4px;font-size:11px">소비기한</th>'
+    +'<th style="width:32px"></th></tr></thead><tbody>'+splitRows+'</tbody></table></div>'
+    +'<div style="display:flex;gap:8px;align-items:center">'
+    +'<button class="btn bg2" style="font-size:14px;padding:10px 28px" onclick="confirmItem('+r.id+')">'+(ok?'수량 맞음 ✓ 확인':'수량 불일치 — 그래도 확인')+'</button>'
+    +(!ok?'<span style="font-size:12px;color:#c62828">합계('+tq+') ≠ 정상수량('+r.normalQty+')</span>':'')
+    +'</div></div>';
+}
+
+function updSplit(id,i,f,v){const r=RAW.find(x=>x.id===id);setSplits(id,getSplits(r).map((s,j)=>j===i?{...s,[f]:v}:s));const c=document.getElementById('scanCard');if(c)c.outerHTML=renderCard(r);}
+function addSplit(id){const r=RAW.find(x=>x.id===id);const sp=getSplits(r);const last=sp[sp.length-1];const h=Math.floor(Number(last.qty)/2)||0;setSplits(id,[...sp.slice(0,-1),{...last,qty:Number(last.qty)-h},{qty:h,expDate:last.expDate,lot:last.lot}]);const c=document.getElementById('scanCard');if(c)c.outerHTML=renderCard(r);}
+function rmSplit(id,i){const r=RAW.find(x=>x.id===id);const sp=getSplits(r).filter((_,j)=>j!==i);setSplits(id,sp.length?sp:[{qty:r.normalQty,expDate:r.expDate,lot:r.lot}]);const c=document.getElementById('scanCard');if(c)c.outerHTML=renderCard(r);}
+function doScan(){const inp=document.getElementById('si'),val=inp.value.trim();if(!val)return;const f=targets().find(r=>r.barcode===val);scanResult=f||null;scanNotFound=f?null:val;inp.value='';render();}
+function openItem(id){scanResult=RAW.find(r=>r.id===id);scanNotFound=null;render();window.scrollTo(0,0);}
+function confirmItem(id){confirmations[id]=true;scanResult=null;render();}
+
+// ── Tab2 최종 출력 ───────────────────────────────────────
+function getOutItems(){
+  const items=[],seen=new Set();
+  RAW.forEach(row=>{
+    const key=row.company+'|'+row.barcode+'|'+row.retInvoice;
+    if(seen.has(key))return;seen.add(key);
+    const reason=effReason(row);
+    if(row.isTarget)getSplits(row).forEach(s=>items.push({...row,normalQty:Number(s.qty||0),expDate:s.expDate,lot:s.lot,returnReason:reason}));
+    else items.push({...row,returnReason:reason});
+  });
+  items.sort((a,b)=>{
+    const cc=a.company.localeCompare(b.company,'ko');
+    if(cc!==0)return cc;
+    return (REASON_ORDER[a.returnReason]||9)-(REASON_ORDER[b.returnReason]||9);
+  });
+  return items;
+}
+
+function renderOut(){
+  const items=getOutItems();
+  const companies=[...new Set(items.map(r=>r.company))].sort((a,b)=>a.localeCompare(b,'ko'));
+  const hist=loadHistory();
+
+  let html='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">'
+    +'<span style="font-size:15px;font-weight:600">최종 출력 — 고객사·사유별</span>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+    +'<span style="font-size:12px;color:#1565c0;padding:7px 0">📦 누적 RAW: '+hist.length+'건</span>'
+    +'<button class="btn" onclick="copyAllOut()">📋 전체 복사</button>'
+    +'<button class="btn bp" onclick="openSendModal()">📤 리포트 발송</button>'
+    +'</div></div>';
+
+  // 요약
+  html+='<div class="g4">'
+    +'<div class="metric"><div class="ml">마감후취소</div><div class="mv">'+items.filter(r=>r.returnReason==='마감후취소'&&r.normalQty>0).length+'</div></div>'
+    +'<div class="metric"><div class="ml">파손반송</div><div class="mv">'+items.filter(r=>r.returnReason==='파손반송'&&r.normalQty>0).length+'</div></div>'
+    +'<div class="metric"><div class="ml">당배반송</div><div class="mv">'+items.filter(r=>r.returnReason==='당배반송'&&r.normalQty>0).length+'</div></div>'
+    +'<div class="metric"><div class="ml">사유미기재+비정상</div><div class="mv">'+items.filter(r=>r.returnReason==='사유미기재'||r.normalQty===0).length+'</div></div>'
+    +'</div>';
+
+  companies.forEach(co=>{
+    const rows=items.filter(r=>r.company===co);
+    const reasons=[...new Set(rows.map(r=>r.returnReason))].sort((a,b)=>(REASON_ORDER[a]||9)-(REASON_ORDER[b]||9));
+    const ch=loadChannels().find(c=>c.company===co);
+    const chTag=ch
+      ?'<span style="font-size:11px;background:#e8f0fe;color:#1565c0;border-radius:6px;padding:2px 8px;margin-left:8px">'+(ch.method==='slack'?'💬 슬랙':'✉️ 메일')+' '+ch.target+'</span>'
+      :'<span style="font-size:11px;color:#aaa;margin-left:8px">발송채널 미설정</span>';
+
+    html+='<div class="card">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;margin-bottom:12px;border-bottom:1px solid #f0f0f0;flex-wrap:wrap;gap:6px">'
+      +'<div style="display:flex;align-items:center;flex-wrap:wrap"><span style="font-weight:700;font-size:14px">'+co+'</span>'+chTag+'</div>'
+      +'<span style="font-size:12px;color:#999">'+rows.filter(r=>r.normalQty>0).reduce((s,r)=>s+r.normalQty,0)+'개 가용화 / '+rows.length+'건</span>'
+      +'</div>';
+
+    // 테이블
+    html+='<div class="tw" style="max-height:none;margin-bottom:12px"><table>'
+      +'<thead><tr><th>사유</th><th>CS번호</th><th>주문번호</th><th>원송장</th><th>회수송장</th><th>바코드</th><th>SKU명</th><th style="text-align:center">정상수량</th><th>소비기한</th><th>로트</th><th>검품상태</th></tr></thead>'
+      +'<tbody>';
+    reasons.forEach(reason=>{
+      const rrows=rows.filter(r=>r.returnReason===reason);
+      // CS/주문/원송장/회수송장 동일한 그룹 병합
+      let prevKey='', prevSpanStart=0;
+      const keyOf=r=>r.csNo+'|'+r.orderNo+'|'+r.origInvoice+'|'+r.retInvoice;
+      // rowspan 계산
+      const spans=rrows.map((r,i)=>{
+        const k=keyOf(r);
+        if(i===0||k!==keyOf(rrows[i-1])){
+          // 앞으로 몇 개 같은지
+          let cnt=1;
+          while(i+cnt<rrows.length&&keyOf(rrows[i+cnt])===k)cnt++;
+          return cnt;
+        }
+        return 0; // 이전과 같으면 0 (td 안 그림)
+      });
+      rrows.forEach((r,i)=>{
+        const span=spans[i];
+        html+='<tr class="'+(r.normalQty>0?'rt':'')+'">'
+          +(i===0?'<td rowspan="'+rrows.length+'" style="font-weight:600;vertical-align:top;padding-top:10px;white-space:nowrap">'+rtag(reason)+'</td>':'')
+          +(span>0?'<td class="mono" style="font-size:10px'+(span>1?';vertical-align:middle':'')+'" rowspan="'+span+'">'+r.csNo+'</td>':'')
+          +(span>0?'<td class="mono" style="font-size:10px'+(span>1?';vertical-align:middle':'')+'" rowspan="'+span+'">'+r.orderNo+'</td>':'')
+          +(span>0?'<td class="mono" style="font-size:10px'+(span>1?';vertical-align:middle':'')+'" rowspan="'+span+'">'+r.origInvoice+'</td>':'')
+          +(span>0?'<td class="mono" style="font-size:10px'+(span>1?';vertical-align:middle':'')+'" rowspan="'+span+'">'+r.retInvoice+'</td>':'')
+          +'<td class="mono">'+r.barcode+'</td>'
+          +'<td style="font-size:11px;max-width:160px">'+r.skuName+'</td>'
+          +'<td style="text-align:center;font-weight:700">'+(r.normalQty>0?'<span style="color:#2e7d32">'+r.normalQty+'</span>':'<span style="color:#c62828">–</span>')+'</td>'
+          +'<td style="font-size:11px;white-space:nowrap">'+exLbl(r.expDate)+'</td>'
+          +'<td class="mono">'+lotLbl(r.lot)+'</td>'
+          +'<td style="font-size:10px;color:#888;max-width:130px">'+r.inspStatus+'</td>'
+          +'</tr>';
+      });
+    });
+    html+='</tbody></table></div>';
+
+    // 사유별 복붙 + 입고번호
+    reasons.forEach(reason=>{
+      const pos=rows.filter(r=>r.returnReason===reason&&r.normalQty>0);
+      // 정상수량 없어도 블록 표시 (미발송 비활성화용)
+      const allInReason=rows.filter(r=>r.returnReason===reason);
+      if(!allInReason.length)return;
+
+      const ibKey=co+'|'+reason;
+      const ibVal=inboundNos[ibKey]||'';
+      const retInvs=[...new Set(allInReason.map(r=>r.retInvoice))].join(', ');
+      const noSend=noSendSet.has(ibKey);
+
+      // 재고증가용 텍스트
+      const stockTxt=pos.map(r=>{
+        const hl=r.lot&&!['관리안함','실물확인','보관'].includes(r.lot);
+        const he=r.expDate&&!['관리안함','실물확인','보관'].includes(r.expDate);
+        if(hl&&he)return r.barcode+','+r.normalQty+','+r.lot+','+r.expDate;
+        if(!hl&&he)return r.barcode+','+r.normalQty+',,'+r.expDate;
+        if(hl&&!he)return r.barcode+','+r.normalQty+','+r.lot;
+        return r.barcode+','+r.normalQty;
+      }).join('\n');
+
+      // 메모용 텍스트 (송장번호 포함)
+      const memoTxt=pos.map(r=>{
+        const hl=r.lot&&!['관리안함','실물확인','보관'].includes(r.lot);
+        const he=r.expDate&&!['관리안함','실물확인','보관'].includes(r.expDate);
+        let line=r.retInvoice+','+r.barcode+','+r.normalQty;
+        if(hl&&he)line+=','+r.lot+','+r.expDate;
+        else if(!hl&&he)line+=',,'+r.expDate;
+        else if(hl&&!he)line+=','+r.lot;
+        return line;
+      }).join('\n');
+
+      const encStock=encodeURIComponent(stockTxt);
+      const encMemo=encodeURIComponent(memoTxt);
+      const copyBtns=pos.length
+        ?('<button class="btn" style="font-size:11px;padding:3px 10px" onclick="copyBlock(this,decodeURIComponent(this.dataset.t))" data-t="'+encStock+'">📦 재고증가용</button>'
+          +'<button class="btn" style="font-size:11px;padding:3px 10px" onclick="copyBlock(this,decodeURIComponent(this.dataset.t))" data-t="'+encMemo+'">📋 메모용</button>')
+        :'<span style="font-size:11px;color:#aaa">정상 수량 없음</span>';
+      const preHtml=pos.length
+        ?('<pre style="font-size:11px;font-family:monospace;color:#333;margin:0;white-space:pre-wrap;line-height:1.7">'
+          +(noSend?'<s>':'')+stockTxt+(noSend?'</s>':'')+'</pre>')
+        :''
+      html+=('<div style="background:#f8f8f8;border-radius:8px;padding:10px 12px;margin-bottom:8px'+(noSend?';opacity:0.45':'')+'">'
+        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">'
+        +rtag(reason)
+        +'<span style="font-size:11px;color:#888">회수송장: '+retInvs+'</span>'
+        +'<input type="text" value="'+ibVal+'" placeholder="입고번호 직접 입력"'
+        +' style="width:160px;font-size:12px;padding:4px 8px'+(noSend?';pointer-events:none;background:#eee':'')+'"'
+        +' onchange="inboundNos[\''+ibKey+'\']=this.value">'
+        +'<label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#888;cursor:pointer;margin-left:4px">'
+        +'<input type="checkbox" '+(noSend?'checked':'')+' onchange="toggleNoSend(\''+ibKey+'\',this.checked)"> 미발송</label>'
+        +copyBtns
+        +'</div>'
+        +preHtml
+        +'</div>');
+    });
+    html+='</div>';
+  });
+
+  // 전체 출력
+  html+='<div class="eb">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+    +'<span style="font-size:13px;font-weight:600">전체 출력</span>'
+    +'<button class="btn bp" onclick="copyAllOut()">복사</button></div>'
+    +'<pre id="ep">'+buildExportText(items)+'</pre></div>';
+
+  return html;
+}
+
+function buildExportText(items){
+  const byC={};
+  items.forEach(r=>{if(!byC[r.company])byC[r.company]=[];byC[r.company].push(r);});
+  let out='';
+  Object.entries(byC).sort().forEach(([co,rows])=>{
+    out+='=== '+co+' ===\n';
+    const reasons=[...new Set(rows.map(r=>r.returnReason))].sort((a,b)=>(REASON_ORDER[a]||9)-(REASON_ORDER[b]||9));
+    reasons.forEach(reason=>{
+      const pos=rows.filter(r=>r.returnReason===reason&&r.normalQty>0);
+      if(!pos.length)return;
+      const ibKey=co+'|'+reason;
+      const ibVal=inboundNos[ibKey]||'';
+      const retInvs=[...new Set(pos.map(r=>r.retInvoice))].join(', ');
+      out+='['+reason+(ibVal?' | 입고번호: '+ibVal:'')+' | 회수송장: '+retInvs+']\n';
+      pos.forEach(r=>{
+        const hl=r.lot&&!['관리안함','실물확인','보관'].includes(r.lot);
+        const he=r.expDate&&!['관리안함','실물확인','보관'].includes(r.expDate);
+        if(hl&&he)out+='  '+r.barcode+','+r.normalQty+','+r.lot+','+r.expDate+'\n';
+        else if(!hl&&he)out+='  '+r.barcode+','+r.normalQty+',,'+r.expDate+'\n';
+        else if(hl&&!he)out+='  '+r.barcode+','+r.normalQty+','+r.lot+'\n';
+        else out+='  '+r.barcode+','+r.normalQty+'\n';
+      });
+    });
+    out+='\n';
+  });
+  return out;
+}
+
+function toggleNoSend(ibKey, checked){
+  if(checked) noSendSet.add(ibKey);
+  else noSendSet.delete(ibKey);
+  render();
+}
+
+function copyBlock(btn,text){
+  if(navigator.clipboard)navigator.clipboard.writeText(text).then(()=>{const o=btn.textContent;btn.textContent='✓';setTimeout(()=>btn.textContent=o,1500);});
+}
+function copyAllOut(){
+  const p=document.getElementById('ep');
+  if(p&&navigator.clipboard)navigator.clipboard.writeText(p.textContent).then(()=>alert('복사됐습니다!'));
+}
+
+// ── Tab3 발송 설정 ───────────────────────────────────────
+function renderSettings(){
+  const channels=loadChannels();
+  const scriptUrl=getSetting('scriptUrl','');
+  const companies=[...new Set(RAW.map(r=>r.company))].sort((a,b)=>a.localeCompare(b,'ko'));
+  companies.forEach(co=>{if(!channels.find(c=>c.company===co))channels.push({company:co,method:'email',target:'',active:true});});
+
+  const chRows=channels.map((ch,i)=>'<div class="ch-row">'
+    +'<input type="text" value="'+ch.company+'" style="font-size:12px" onchange="chBuf['+i+']=chBuf['+i+']||Object.assign({},chArr['+i+']);chBuf['+i+'].company=this.value">'
+    +'<select style="font-size:12px" onchange="chBuf['+i+']=chBuf['+i+']||Object.assign({},chArr['+i+']);chBuf['+i+'].method=this.value;this.closest(\'.ch-row\').querySelector(\'input.ch-target\').placeholder=this.value===\'slack\'?\'Webhook URL 또는 #채널\':\'이메일1, 이메일2\'">'
+    +'<option value="email"'+(ch.method==='email'?' selected':'')+'>✉️ 메일</option>'
+    +'<option value="slack"'+(ch.method==='slack'?' selected':'')+'>💬 슬랙</option>'
+    +'</select>'
+    +'<input type="text" class="ch-target" value="'+(ch.target||'')+'" placeholder="'+(ch.method==='slack'?'Webhook URL 또는 #채널':'이메일1, 이메일2')+'" style="font-size:12px" onchange="chBuf['+i+']=chBuf['+i+']||Object.assign({},chArr['+i+']);chBuf['+i+'].target=this.value">'
+    +'<div style="text-align:center"><input type="checkbox" '+(ch.active!==false?'checked':'')+' onchange="chBuf['+i+']=chBuf['+i+']||Object.assign({},chArr['+i+']);chBuf['+i+'].active=this.checked" style="width:16px;height:16px;cursor:pointer"></div>'
+    +'</div>').join('');
+
+  // 전역 변수 초기화 (innerHTML로 script 실행 불가 대신 직접 할당)
+  chArr=JSON.parse(JSON.stringify(channels));
+  chBuf={};
+  return '<div class="setting-section">'
+    +'<div class="setting-title">📊 구글시트 Apps Script URL</div>'
+    +'<div style="font-size:12px;color:#888;margin-bottom:8px">발송 시 자동으로 시트에 누적됩니다.</div>'
+    +'<div style="display:flex;gap:8px;align-items:center">'
+    +'<input type="text" id="scriptUrlInput" value="'+scriptUrl+'" placeholder="https://script.google.com/macros/s/.../exec" style="flex:1">'
+    +'<button class="btn bp" onclick="setSetting(\'scriptUrl\',document.getElementById(\'scriptUrlInput\').value.trim());alert(\'저장됐습니다!\')">저장</button>'
+    +'<button class="btn" onclick="window.open(\'https://docs.google.com/spreadsheets/d/15eIQMv6hfWVdbMVXg-c95mc_gpSC3TYhzIxh3qTke-M/edit?gid=0#gid=0\',\'_blank\')">시트 열기</button>'
+    +'</div>'
+    +'<div style="margin-top:10px;background:#f0f4ff;border-radius:8px;padding:10px 12px;font-size:12px">'
+    +'<strong>Apps Script 설정 방법:</strong><br>'
+    +'1. 시트 열기 → 확장 프로그램 → Apps Script<br>'
+    +'2. 제공된 .gs 파일 코드 붙여넣고 저장<br>'
+    +'3. 배포 → 새 배포 → 웹앱 → 액세스: 모든 사람 → 배포<br>'
+    +'4. 배포 URL 위에 입력 후 저장'
+    +'</div></div>'
+    +'<div class="setting-section">'
+    +'<div class="setting-title">📤 고객사별 발송 채널</div>'
+    +'<div style="font-size:12px;color:#888;margin-bottom:12px">메일은 쉼표로 여러 주소 입력 가능. 저장 버튼 클릭 시 영구 저장.</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 110px 1fr 60px;gap:8px;margin-bottom:6px">'
+    +'<div style="font-size:11px;font-weight:600;color:#888">고객사명</div>'
+    +'<div style="font-size:11px;font-weight:600;color:#888">발송방법</div>'
+    +'<div style="font-size:11px;font-weight:600;color:#888">슬랙채널 / 메일주소</div>'
+    +'<div style="font-size:11px;font-weight:600;color:#888;text-align:center">활성</div>'
+    +'</div>'
+    +chRows
+    +'<div style="margin-top:10px;display:flex;gap:8px">'
+    +'<button class="btn" onclick="addChRow()">+ 행 추가</button>'
+    +'<button class="btn bp" onclick="saveChNow()">💾 저장</button>'
+    +'<button class="btn br" onclick="if(confirm(\'누적 RAW 전체를 삭제할까요?\'))localStorage.removeItem(HIST_KEY);alert(\'삭제됐습니다.\')">🗑 누적 RAW 초기화</button>'
+    +'</div></div>';
+}
+
+function addChRow(){
+  chArr.push({company:'',method:'email',target:'',active:true});
+  saveChannels(chArr);
+  chBuf={};
+  render();
+}
+function saveChNow(){
+  Object.entries(chBuf).forEach(([i,v])=>{if(chArr[i])Object.assign(chArr[i],v);else chArr[i]=v;});
+  saveChannels(chArr);
+  chBuf={};
+  alert('저장됐습니다!');
+  render();
+}
+
+function saveSettingsToFile(){
+  // 현재 HTML 소스를 가져와서 초기 설정값 교체 후 다운로드
+  const settings=loadSettings();
+  const channels=loadChannels();
+  // HTML fetch는 불가하므로 사용자에게 안내
+  alert('저장됐습니다!\n\n※ 다른 기기에서도 동일하게 쓰려면\n  설정 탭 하단 [설정 내보내기] 버튼으로\n  설정 파일을 저장해두세요.');
+}
+
+function exportSettings(){
+  const data={settings:loadSettings(),channels:loadChannels()};
+  const json=JSON.stringify(data,null,2);
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([json],{type:'application/json'}));
+  a.download='반품관리_설정.json';a.click();
+}
+
+function importSettings(input){
+  const f=input.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(data.settings)saveSettings(data.settings);
+      if(data.channels)saveChannels(data.channels);
+      alert('설정을 불러왔습니다!');render();
+    }catch(err){alert('파일 형식이 올바르지 않습니다.');}
+  };
+  r.readAsText(f);
+}
+
+// ── 발송 모달 ────────────────────────────────────────────
+function openSendModal(){
+  const items=getOutItems();
+  const companies=[...new Set(items.filter(r=>r.normalQty>0).map(r=>r.company))].sort((a,b)=>a.localeCompare(b,'ko'));
+  const channels=loadChannels();
+  let html='';
+  companies.forEach(co=>{
+    const ch=channels.find(c=>c.company===co&&c.active!==false);
+    html+='<div style="padding:10px 0;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+      +'<span style="font-weight:600;font-size:13px;min-width:120px">'+co+'</span>'
+      +(ch&&ch.target
+        ?'<span style="font-size:12px;color:#555;flex:1">'+(ch.method==='slack'?'💬 '+ch.target:'✉️ '+ch.target)+'</span>'
+         +'<button class="btn bg2" style="font-size:11px;padding:4px 12px" onclick="sendOne(\''+co+'\')">발송</button>'
+         +'<span id="st_'+co.replace(/\W/g,'_')+'" style="font-size:11px;min-width:60px"></span>'
+        :'<span style="font-size:12px;color:#e65100;flex:1">발송채널 미설정 — ⚙️ 설정 탭에서 입력</span>')
+      +'</div>';
+  });
+  document.getElementById('sendList').innerHTML=html||'<div style="color:#888;font-size:13px;padding:20px;text-align:center">발송 가능한 데이터 없음</div>';
+  document.getElementById('sendModal').style.display='flex';
+}
+function closeSendModal(){document.getElementById('sendModal').style.display='none';}
+function sendAll(){
+  const companies=[...new Set(getOutItems().filter(r=>r.normalQty>0).map(r=>r.company))];
+  companies.forEach(co=>sendOne(co));
+}
+
+function sendOne(co){
+  const items=getOutItems().filter(r=>r.company===co&&r.normalQty>0);
+  const ch=loadChannels().find(c=>c.company===co&&c.active!==false);
+  if(!ch||!ch.target){alert('발송채널이 설정되지 않았습니다.');return;}
+  const stEl=document.getElementById('st_'+co.replace(/\W/g,'_'));
+  if(stEl)stEl.textContent='발송 중...';
+  const msg=buildMsg(co,items);
+  if(ch.method==='email'){
+    const emails=ch.target.split(',').map(e=>e.trim()).filter(Boolean);
+    const subj=encodeURIComponent('[반품 양품화] '+co+' - '+new Date().toLocaleDateString('ko-KR'));
+    const body=encodeURIComponent(msg);
+    // 지메일 웹 compose (수신자 여러 명이면 첫 번째로 to, 나머지 cc)
+    const to=emails[0]||'';
+    const cc=emails.slice(1).join(',');
+    const gmailUrl='https://mail.google.com/mail/?view=cm'
+      +'&to='+encodeURIComponent(to)
+      +(cc?'&cc='+encodeURIComponent(cc):'')
+      +'&su='+subj+'&body='+body;
+    window.open(gmailUrl,'_blank');
+    if(stEl)stEl.textContent='✓ 지메일 열림';
+    pushToSheet(co,items);
+  }else{
+    if(!ch.target.startsWith('http')){alert('슬랙 Webhook URL이 https://로 시작해야 합니다.');return;}
+    fetch(ch.target,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:msg})})
+    .then(r=>{if(stEl)stEl.textContent=r.ok?'✓ 발송 완료':'✗ 실패('+r.status+')';if(r.ok)pushToSheet(co,items);})
+    .catch(()=>{if(stEl)stEl.textContent='✗ 네트워크 오류';});
+  }
+}
+
+function buildMsg(co,items){
+  const reasons=[...new Set(items.map(r=>r.returnReason))].sort((a,b)=>(REASON_ORDER[a]||9)-(REASON_ORDER[b]||9));
+  let msg='[반품 양품화 리포트] '+co+' - '+new Date().toLocaleDateString('ko-KR')+'\n\n';
+  reasons.forEach(reason=>{
+    const pos=items.filter(r=>r.returnReason===reason);
+    if(!pos.length)return;
+    const ibKey=co+'|'+reason;
+    const ibVal=inboundNos[ibKey]||'';
+    const retInvs=[...new Set(pos.map(r=>r.retInvoice))].join(', ');
+    msg+='■ '+reason+(ibVal?' | 입고번호: '+ibVal:'')+'\n';
+    msg+='  회수송장: '+retInvs+'\n';
+    pos.forEach(r=>{
+      const hl=r.lot&&!['관리안함','실물확인','보관'].includes(r.lot);
+      const he=r.expDate&&!['관리안함','실물확인','보관'].includes(r.expDate);
+      let line='  '+r.barcode+', '+r.normalQty+'개';
+      if(he)line+=' / '+r.expDate;
+      if(hl)line+=' / '+r.lot;
+      msg+=line+'\n';
+    });
+    msg+='\n';
+  });
+  return msg;
+}
+
+function pushToSheet(co,items){
+  const url=getSetting('scriptUrl','');
+  if(!url)return;
+  const rows=items.map(r=>({
+    company:r.company,csNo:r.csNo,orderNo:r.orderNo,
+    origInvoice:r.origInvoice,retInvoice:r.retInvoice,
+    barcode:r.barcode,skuName:r.skuName,
+    normalQty:r.normalQty,expDate:r.expDate,lot:r.lot,
+    returnReason:r.returnReason,
+    inboundNo:inboundNos[co+'|'+r.returnReason]||'',
+    inspDate:r.inspDate
+  }));
+  fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows})}).catch(()=>{});
+}
+</script>
+</body>
+</html>
