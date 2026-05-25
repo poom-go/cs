@@ -192,7 +192,13 @@ let chArr=[], chBuf={}; // 미발송 체크된 ibKey들
 // ── 설정 (localStorage 영구 저장) ────────────────────────
 function loadSettings(){try{return JSON.parse(localStorage.getItem('rqc_settings')||'{}');}catch(e){return {};}}
 function saveSettings(s){localStorage.setItem('rqc_settings',JSON.stringify(s));}
-function getSetting(key,def){return (loadSettings()[key]!==undefined?loadSettings()[key]:def||'');}
+function getSetting(key,def){
+  const DEFAULT_SCRIPT_URL='https://script.google.com/macros/s/AKfycbzQAKaCj13sxJuTSFbsSwnxCqKXsAtlZDXd9IH8ivSXf14G2avkS6x8U5jeths6ru1o/exec';
+  const stored=loadSettings()[key];
+  if(stored!==undefined&&stored!=='') return stored;
+  if(key==='scriptUrl') return DEFAULT_SCRIPT_URL;
+  return def||'';
+}
 function setSetting(key,val){const s=loadSettings();s[key]=val;saveSettings(s);}
 function loadChannels(){try{return JSON.parse(localStorage.getItem('rqc_channels')||'[]');}catch(e){return [];}}
 function saveChannels(arr){localStorage.setItem('rqc_channels',JSON.stringify(arr));}
