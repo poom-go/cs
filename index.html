@@ -601,7 +601,7 @@ function renderRaw(){
   const coOpts=cos.map(c=>'<option value="'+c+'"'+(fCo===c?' selected':'')+'>'+c+'</option>').join('');
 
   const cancelStatus=[...cancelSet].length>0
-    ?'✓ '+[...cancelSet].length+'건 로드됨 ('+[...cancelSet].slice(0,3).join(', ')+([...cancelSet].length>3?'...':'')+')'
+    ?'✓ '+[...cancelSet].length+'건 로드됨'
     :'⚠ 미로드';
   return '<div class="notice" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
     +'<strong>마감후취소</strong>'
