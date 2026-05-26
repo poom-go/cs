@@ -107,6 +107,7 @@ input:focus,select:focus{outline:none;border-color:#1a1a1a}
     </div>
   </div>
   <button class="run-btn" id="runBtn" onclick="processFiles()" disabled>처리 시작</button>
+  <button class="btn" id="loadSessionBtn" onclick="tryLoadSession()" style="font-size:13px;padding:10px 24px">📂 오늘 작업 불러오기</button>
   <button class="cv-btn" id="cvBtn" onclick="convertCSV()" disabled>📥 재고매핑.csv 만들기</button>
 </div>
 <div id="page-progress">
@@ -237,6 +238,45 @@ function checkReady(){
   document.getElementById('runBtn').disabled=!ok;
   document.getElementById('cvBtn').disabled=invFiles.length===0;
 }
+async function tryLoadSession(){
+  const url=getSetting('scriptUrl','');
+  if(!url){alert('Apps Script URL이 설정되지 않았습니다.\n⚙️ 발송 설정 탭에서 입력해주세요.');return;}
+  document.getElementById('loadSessionBtn').textContent='불러오는 중...';
+  const key=new Date().toISOString().split('T')[0]; // 오늘 날짜로 시도
+  try{
+    const resp=await fetch(url+'?action=loadSession&key='+encodeURIComponent(key),{cache:'no-cache'});
+    const json=await resp.json();
+    if(!json.ok||!json.data){
+      document.getElementById('loadSessionBtn').textContent='📂 오늘 작업 불러오기';
+      alert('저장된 작업이 없습니다.\n파일을 올려서 새로 시작해주세요.');
+      return;
+    }
+    const d=json.data;
+    if(!d.raw||d.raw.length===0){
+      document.getElementById('loadSessionBtn').textContent='📂 오늘 작업 불러오기';
+      alert('저장된 데이터가 비어있습니다.');
+      return;
+    }
+    RAW=d.raw;
+    confirmations=d.confirmations||{};
+    edits=d.edits||{};
+    inboundNos=d.inboundNos||{};
+    noSendSet=new Set(d.noSendSet||[]);
+    cancelSet=new Set(d.cancelSet||[]);
+    // 메인 화면으로 전환
+    showPage('main');
+    document.getElementById('tabBar').style.display='flex';
+    document.getElementById('btnReload').style.display='';
+    document.getElementById('btnSheets').style.display='';
+    document.getElementById('hdrDate').textContent=new Date().toLocaleDateString('ko-KR');
+    curTab=0;render();
+    alert('✓ 작업을 불러왔습니다! (저장: '+d.savedAt+')');
+  }catch(e){
+    document.getElementById('loadSessionBtn').textContent='📂 오늘 작업 불러오기';
+    alert('불러오기 실패: '+e.message);
+  }
+}
+
 function goUpload(){
   F={1:null,2:null};RAW=[];confirmations={};edits={};cancelSet=new Set();fCo='';fRes='';
   ['fn1','fn2','fn3'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='';});
@@ -312,7 +352,7 @@ function processFiles(){
       document.getElementById('hdrDate').textContent=new Date().toLocaleDateString('ko-KR');
       mergeHistory(RAW);
       curTab=0;
-      loadCancelSheet().then(()=>render());
+      loadCancelSheet().then(()=>{render();saveSession();});
     },400))
     .catch(e=>{
       showPage('main');
@@ -607,6 +647,7 @@ function renderRaw(){
     +'<strong>마감후취소</strong>'
     +'<span style="font-size:11px;color:#888" id="cancelSheetStatus">'+cancelStatus+'</span>'
     +'<button class="btn" style="font-size:11px;padding:3px 10px" onclick="loadCancelSheet()">🔄 시트 새로고침</button>'
+    +'<button class="btn" style="font-size:11px;padding:3px 10px;margin-left:auto" onclick="saveSession().then(()=>alert(\"저장됐습니다!\"))">💾 지금 저장</button>'
     +'</div>'
     +'<div class="g4">'
     +'<div class="metric"><div class="ml">전체 검품</div><div class="mv">'+RAW.length+'</div></div>'
@@ -706,7 +747,7 @@ function addSplit(id){const r=RAW.find(x=>x.id===id);const sp=getSplits(r);const
 function rmSplit(id,i){const r=RAW.find(x=>x.id===id);const sp=getSplits(r).filter((_,j)=>j!==i);setSplits(id,sp.length?sp:[{qty:r.normalQty,expDate:r.expDate,lot:r.lot}]);const c=document.getElementById('scanCard');if(c)c.outerHTML=renderCard(r);}
 function doScan(){const inp=document.getElementById('si'),val=inp.value.trim();if(!val)return;const f=targets().find(r=>r.barcode===val);scanResult=f||null;scanNotFound=f?null:val;inp.value='';render();}
 function openItem(id){scanResult=RAW.find(r=>r.id===id);scanNotFound=null;render();window.scrollTo(0,0);}
-function confirmItem(id){confirmations[id]=true;scanResult=null;render();}
+function confirmItem(id){confirmations[id]=true;scanResult=null;render();saveSession();}
 
 // ── Tab2 최종 출력 ───────────────────────────────────────
 function getOutItems(){
@@ -902,6 +943,7 @@ function toggleNoSend(ibKey, checked){
   if(checked) noSendSet.add(ibKey);
   else noSendSet.delete(ibKey);
   render();
+  saveSession();
 }
 
 function copyBlock(btn,text){
@@ -1101,6 +1143,55 @@ function pushToSheet(co,items){
   }));
   fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows})}).catch(()=>{});
 }
+
+// ── 세션 저장/불러오기 ────────────────────────────────────
+function getSessionKey(){
+  // 검품일 기준 (RAW 첫번째 행의 날짜, 없으면 오늘)
+  const d = RAW.length > 0 ? RAW[0].inspDate : '';
+  return d || new Date().toISOString().split('T')[0];
+}
+
+async function saveSession(){
+  const url=getSetting('scriptUrl','');
+  if(!url) return;
+  const key=getSessionKey();
+  const body={
+    action:'saveSession', key,
+    raw: RAW,
+    confirmations,
+    edits,
+    inboundNos,
+    noSendSet:[...noSendSet],
+    cancelSet:[...cancelSet]
+  };
+  try{
+    await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  }catch(e){console.warn('세션 저장 실패:',e.message);}
+}
+
+async function loadSession(){
+  const url=getSetting('scriptUrl','');
+  if(!url) return false;
+  const key=getSessionKey();
+  try{
+    const resp=await fetch(url+'?action=loadSession&key='+encodeURIComponent(key),{cache:'no-cache'});
+    if(!resp.ok) return false;
+    const json=await resp.json();
+    if(!json.ok||!json.data) return false;
+    const d=json.data;
+    if(d.raw&&d.raw.length>0){
+      RAW=d.raw;
+      confirmations=d.confirmations||{};
+      edits=d.edits||{};
+      inboundNos=d.inboundNos||{};
+      noSendSet=new Set(d.noSendSet||[]);
+      cancelSet=new Set(d.cancelSet||[]);
+      return true;
+    }
+    return false;
+  }catch(e){console.warn('세션 불러오기 실패:',e.message);return false;}
+}
+
 </script>
 </body>
 </html>
