@@ -187,6 +187,7 @@ let cancelSet=new Set();
 let fCo='',fRes='';
 let scanResult=null, scanNotFound=null;
 let inboundNos={};
+let outOverrides={};
 let noSendSet=new Set();
 let chArr=[], chBuf={}; // 미발송 체크된 ibKey들
 
@@ -473,7 +474,7 @@ function buildRaw(df1,df2){
       origQty:oq,retQty:parseInt(row['회수 수량']||0)||0,
       inspResult:ir,inspStatus:is_,
       normalQty:nq,abnormalQty:oq-nq,expDate:exp,lot,returnReason:reason,
-      isTarget:!excl&&nq>0,inspDate:String(row['검품일']||'').split('T')[0]};
+      isTarget:!excl&&(nq>0||ir==='검품불가'||is_.includes('검품불가')),inspDate:String(row['검품일']||'').split('T')[0]};
   });
 }
 
@@ -637,27 +638,6 @@ function renderRaw(){
       +'</tr>';
   }).join('');
 
-  const cancelTags=[...cancelSet].map(v=>'<span style="display:inline-block;background:#e8f0fe;color:#1565c0;border-radius:6px;padding:2px 8px;font-size:11px;margin:2px;cursor:pointer" onclick="rmCancel(\''+v+'\')">'+v+' ✕</span>').join('')||'<span style="color:#ccc;font-size:11px">없음</span>';
-  const coOpts=cos.map(c=>'<option value="'+c+'"'+(fCo===c?' selected':'')+'>'+c+'</option>').join('');
-
-  const cancelStatus=[...cancelSet].length>0
-    ?'✓ '+[...cancelSet].length+'건 로드됨'
-    :'⚠ 미로드';
-  return '<div class="notice" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
-    +'<strong>마감후취소</strong>'
-    +'<span style="font-size:11px;color:#888" id="cancelSheetStatus">'+cancelStatus+'</span>'
-    +'<button class="btn" style="font-size:11px;padding:3px 10px" onclick="loadCancelSheet()">🔄 시트 새로고침</button>'
-    +'<button class="btn" style="font-size:11px;padding:3px 10px;margin-left:auto" onclick="saveSession().then(()=>alert(\"저장됐습니다!\"))">💾 지금 저장</button>'
-    +'</div>'
-    +'<div class="g4">'
-    +'<div class="metric"><div class="ml">전체 검품</div><div class="mv">'+RAW.length+'</div></div>'
-    +'<div class="metric"><div class="ml">양품화 대상</div><div class="mv" style="color:#2e7d32">'+tgts.length+'</div></div>'
-    +'<div class="metric"><div class="ml">제외(랄프·데일리뷰티)</div><div class="mv" style="color:#999">'+RAW.filter(r=>r.excluded).length+'</div></div>'
-    +'<div class="metric"><div class="ml">실물확인 필요</div><div class="mv" style="color:#e65100">'+tgts.filter(r=>r.expDate==='실물확인').length+'</div></div>'
-    +'</div>'
-    +'<div class="notice"><strong>마감후취소</strong> — 구글 시트 확인 후 회수송장번호 입력<br>'
-    +'<div style="display:flex;gap:8px;margin-top:8px"><input type="text" id="ci" placeholder="회수송장번호 후 Enter" style="max-width:260px" onkeydown="if(event.key===\'Enter\')addCancel()"><button class="btn bp" onclick="addCancel()">추가</button></div>'
-    +'<div style="margin-top:6px">'+cancelTags+'</div></div>'
     +'<div class="fb">'
     +'<select onchange="fCo=this.value;render()"><option value="">전체 고객사</option>'+coOpts+'</select>'
     +'<select onchange="fRes=this.value;render()"><option value="">전체 결과</option><option value="정상"'+(fRes==='정상'?' selected':'')+'>정상</option><option value="비정상"'+(fRes==='비정상'?' selected':'')+'>비정상</option></select>'
@@ -713,7 +693,7 @@ function renderCard(r){
   const splitRows=sp.map((s,i)=>{
     return '<tr>'
       +'<td style="padding:5px 4px;text-align:center"><input type="number" min="0" value="'+s.qty+'" style="width:56px;text-align:center;font-weight:700;font-size:14px" onchange="updSplit('+r.id+','+i+',\'qty\',parseInt(this.value)||0)"></td>'
-      +'<td style="padding:5px 4px"><input type="text" value="'+(s.lot||'')+'" placeholder="없으면 관리안함" '+(noLot?'disabled style="opacity:0.4;width:120px"':'style="width:120px"')+' onchange="updSplit('+r.id+','+i+',\'lot\',this.value)"></td>'
+      +'<td style="padding:5px 4px"><input type="text" value="'+(s.lot||'')+'" placeholder="없으면 관리안함" '+((noLot&&s.lot!=='실물확인')?'disabled style="opacity:0.4;width:120px"':'style="width:120px"')+' onchange="updSplit('+r.id+','+i+',\'lot\',this.value)"></td>'
       +'<td style="padding:5px 4px"><input type="text" value="'+(s.expDate||'')+'" placeholder="YYYY-MM-DD 또는 관리안함" style="width:148px" onchange="updSplit('+r.id+','+i+',\'expDate\',this.value)"></td>'
       +'<td style="padding:5px 4px;text-align:center">'+(sp.length>1?'<button class="btn" style="padding:2px 7px;font-size:11px;color:#c62828" onclick="rmSplit('+r.id+','+i+')">✕</button>':'')+'</td>'
       +'</tr>';
@@ -833,8 +813,8 @@ function renderOut(){
           +'<td class="mono">'+r.barcode+'</td>'
           +'<td style="font-size:11px;max-width:160px">'+r.skuName+'</td>'
           +'<td style="text-align:center;font-weight:700">'+(r.normalQty>0?'<span style="color:#2e7d32">'+r.normalQty+'</span>':'<span style="color:#c62828">–</span>')+'</td>'
-          +'<td style="font-size:11px;white-space:nowrap">'+exLbl(r.expDate)+'</td>'
-          +'<td class="mono">'+lotLbl(r.lot)+'</td>'
+          +'<td style="font-size:11px;white-space:nowrap">'+renderExpCell(r)+'</td>'
+          +'<td class="mono">'+renderLotCell(r)+'</td>'
           +'<td style="font-size:10px;color:#888;max-width:130px">'+r.inspStatus+'</td>'
           +'</tr>';
       });
@@ -855,11 +835,13 @@ function renderOut(){
 
       // 재고증가용 텍스트
       const stockTxt=pos.map(r=>{
-        const hl=r.lot&&!['관리안함','실물확인','보관'].includes(r.lot);
-        const he=r.expDate&&!['관리안함','실물확인','보관'].includes(r.expDate);
-        if(hl&&he)return r.barcode+','+r.normalQty+','+r.lot+','+r.expDate;
-        if(!hl&&he)return r.barcode+','+r.normalQty+',,'+r.expDate;
-        if(hl&&!he)return r.barcode+','+r.normalQty+','+r.lot;
+        const exp=getOverride(r,'expDate');
+        const lot=getOverride(r,'lot');
+        const hl=lot&&!['관리안함','실물확인','보관'].includes(lot);
+        const he=exp&&!['관리안함','실물확인','보관'].includes(exp);
+        if(hl&&he)return r.barcode+','+r.normalQty+','+lot+','+exp;
+        if(!hl&&he)return r.barcode+','+r.normalQty+',,'+exp;
+        if(hl&&!he)return r.barcode+','+r.normalQty+','+lot;
         return r.barcode+','+r.normalQty;
       }).join('\n');
 
@@ -937,6 +919,42 @@ function buildExportText(items){
     out+='\n';
   });
   return out;
+}
+
+
+function renderExpCell(r){
+  const cur=getOverride(r,'expDate');
+  if(cur!=='실물확인'&&r.expDate!=='실물확인') return exLbl(cur||r.expDate);
+  const val=cur==='실물확인'?'':cur==='관리안함'?'':cur||'';
+  const isMgmt=cur==='관리안함';
+  return '<select onchange="setOutOverride('+r.id+',\'expDate\',this.value)" style="font-size:11px;padding:2px 4px">'
+    +'<option value="실물확인"'+((!cur||cur==='실물확인')?' selected':'')+'>실물확인</option>'
+    +'<option value="관리안함"'+(isMgmt?' selected':'')+'>관리안함</option>'
+    +'</select>'
+    +(!isMgmt?'<input type="text" placeholder="YYYY-MM-DD" value="'+val+'" style="width:95px;font-size:11px;padding:2px 4px;margin-left:2px" onchange="setOutOverride('+r.id+',\'expDate\',this.value||\'실물확인\')">':'');
+}
+
+function renderLotCell(r){
+  const cur=getOverride(r,'lot');
+  if(cur!=='실물확인'&&r.lot!=='실물확인') return lotLbl(cur||r.lot);
+  const val=cur==='실물확인'?'':cur==='관리안함'?'':cur||'';
+  const isMgmt=cur==='관리안함';
+  return '<select onchange="setOutOverride('+r.id+',\'lot\',this.value)" style="font-size:11px;padding:2px 4px">'
+    +'<option value="실물확인"'+((!cur||cur==='실물확인')?' selected':'')+'>실물확인</option>'
+    +'<option value="관리안함"'+(isMgmt?' selected':'')+'>관리안함</option>'
+    +'</select>'
+    +(!isMgmt?'<input type="text" placeholder="로트값" value="'+val+'" style="width:75px;font-size:11px;padding:2px 4px;margin-left:2px" onchange="setOutOverride('+r.id+',\'lot\',this.value||\'실물확인\')">':'');
+}
+
+function getOverride(r,field){
+  const key='override_'+r.id+'_'+field;
+  return outOverrides[key]!==undefined?outOverrides[key]:r[field];
+}
+
+function setOutOverride(id, field, val){
+  const key='override_'+id+'_'+field;
+  outOverrides[key]=val;
+  render();
 }
 
 function toggleNoSend(ibKey, checked){
