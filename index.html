@@ -1200,33 +1200,36 @@ async function saveSession(){
   const url=getSetting('scriptUrl','');
   if(!url){console.warn('scriptUrl 미설정');return;}
   const key=getSessionKey();
-  const body={
-    action:'saveSession', key,
+  // 각 데이터를 개별 파라미터로 전송 (URL 길이 분산)
+  const state={
     confirmations,
     edits,
     inboundNos,
     noSendSet:[...noSendSet],
     cancelSet:[...cancelSet]
   };
-  // JSONP GET 방식으로 저장 (CORS 완전 우회)
   return new Promise((resolve)=>{
     const cbName='_sav_'+Date.now();
     const script=document.createElement('script');
     const timer=setTimeout(()=>{
       try{delete window[cbName];document.body.removeChild(script);}catch(e){}
-      console.warn('세션 저장 타임아웃');
+      console.warn('세션 저장 타임아웃 - 데이터가 너무 클 수 있음');
       resolve();
-    },15000);
+    },20000);
     window[cbName]=function(data){
       clearTimeout(timer);
       try{delete window[cbName];document.body.removeChild(script);}catch(e){}
-      if(data&&data.ok) console.log('세션 저장 완료, key='+key);
+      if(data&&data.ok) console.log('✓ 세션 저장 완료, key='+key);
       else console.warn('세션 저장 실패:',data&&data.error);
       resolve();
     };
-    // 데이터를 JSON으로 인코딩해서 GET 파라미터로 전송
-    const encoded=encodeURIComponent(JSON.stringify(body));
-    script.src=url+'?action=saveSession&data='+encoded+'&callback='+cbName;
+    const params=new URLSearchParams({
+      action:'saveSession',
+      key:key,
+      state:JSON.stringify(state),
+      callback:cbName
+    });
+    script.src=url+'?'+params.toString();
     document.body.appendChild(script);
   });
 }
