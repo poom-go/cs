@@ -154,16 +154,25 @@ input:focus,select:focus{outline:none;border-color:#1a1a1a}
 async function fetchCancelSheet(){
   const scriptUrl=getSetting('scriptUrl','');
   if(!scriptUrl){console.warn('Apps Script URL 미설정');return [];}
-  try{
-    const resp=await fetch(scriptUrl+'?action=cancelList',{cache:'no-cache'});
-    if(!resp.ok) throw new Error('HTTP '+resp.status);
-    const json=await resp.json();
-    if(!json.ok) throw new Error(json.error||'오류');
-    return json.invoices||[];
-  }catch(e){
-    console.warn('마감후취소 읽기 실패:',e.message);
-    return [];
-  }
+  return new Promise((resolve)=>{
+    const cbName='_cb_'+Date.now();
+    const script=document.createElement('script');
+    const timer=setTimeout(()=>{
+      delete window[cbName];
+      document.body.removeChild(script);
+      console.warn('마감후취소 읽기 타임아웃');
+      resolve([]);
+    },10000);
+    window[cbName]=function(data){
+      clearTimeout(timer);
+      delete window[cbName];
+      document.body.removeChild(script);
+      if(data&&data.ok) resolve(data.invoices||[]);
+      else{console.warn('마감후취소 오류:',data&&data.error);resolve([]);}
+    };
+    script.src=scriptUrl+'?action=cancelList&callback='+cbName;
+    document.body.appendChild(script);
+  });
 }
 async function loadCancelSheet(){
   const el=document.getElementById('cancelSheetStatus');
@@ -245,8 +254,14 @@ async function tryLoadSession(){
   document.getElementById('loadSessionBtn').textContent='불러오는 중...';
   const key=new Date().toISOString().split('T')[0]; // 오늘 날짜로 시도
   try{
-    const resp=await fetch(url+'?action=loadSession&key='+encodeURIComponent(key),{cache:'no-cache'});
-    const json=await resp.json();
+    const json=await new Promise((resolve)=>{
+      const cbName='_cb_'+Date.now();
+      const script=document.createElement('script');
+      const timer=setTimeout(()=>{delete window[cbName];document.body.removeChild(script);resolve({ok:false});},10000);
+      window[cbName]=function(data){clearTimeout(timer);delete window[cbName];document.body.removeChild(script);resolve(data);};
+      script.src=url+'?action=loadSession&key='+encodeURIComponent(key)+'&callback='+cbName;
+      document.body.appendChild(script);
+    });
     if(!json.ok||!json.data){
       document.getElementById('loadSessionBtn').textContent='📂 오늘 작업 불러오기';
       alert('저장된 작업이 없습니다.\n파일을 올려서 새로 시작해주세요.');
@@ -1171,7 +1186,8 @@ function pushToSheet(co,items){
     inboundNo:inboundNos[co+'|'+r.returnReason]||'',
     inspDate:r.inspDate
   }));
-  fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows})}).catch(()=>{});
+  fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows})})
+    .then(r=>r.json()).then(d=>console.log('리포트 저장:',d)).catch(e=>console.warn('리포트 저장 실패:',e));
 }
 
 // ── 세션 저장/불러오기 ────────────────────────────────────
@@ -1196,8 +1212,9 @@ async function saveSession(){
   };
   try{
     const resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    if(!resp.ok) console.warn('세션 저장 실패: HTTP',resp.status);
-    else console.log('세션 저장 완료, key='+key);
+    const result=await resp.json();
+    if(result.ok) console.log('세션 저장 완료, key='+key);
+    else console.warn('세션 저장 실패:',result.error);
   }catch(e){console.warn('세션 저장 실패:',e.message);}
 }
 
@@ -1206,9 +1223,14 @@ async function loadSession(){
   if(!url) return false;
   const key=getSessionKey();
   try{
-    const resp=await fetch(url+'?action=loadSession&key='+encodeURIComponent(key),{cache:'no-cache'});
-    if(!resp.ok) return false;
-    const json=await resp.json();
+    const json=await new Promise((resolve)=>{
+      const cbName='_cb_'+Date.now();
+      const script=document.createElement('script');
+      const timer=setTimeout(()=>{delete window[cbName];document.body.removeChild(script);resolve({ok:false});},10000);
+      window[cbName]=function(data){clearTimeout(timer);delete window[cbName];document.body.removeChild(script);resolve(data);};
+      script.src=url+'?action=loadSession&key='+encodeURIComponent(key)+'&callback='+cbName;
+      document.body.appendChild(script);
+    });
     if(!json.ok||!json.data) return false;
     const d=json.data;
     if(d){
